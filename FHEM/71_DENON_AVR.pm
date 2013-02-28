@@ -8,6 +8,8 @@
 #	  Copyright by Boris Pruessmann
 #	  e-mail: boris@pruessmann.org
 #
+#     Greatly inspired by 71_YAMAHA_PVR.pm originally written by Markus Bloch
+#
 #	  This file is part of fhem.
 #
 #	  Fhem is free software: you can redistribute it and/or modify
@@ -451,3 +453,144 @@ DENON_AVR_Command_StatusRequest($)
 }
 
 1;
+
+=pod
+=begin html
+
+<a name="DENON_AVR"></a>
+<h3>DENON_AVR</h3>
+<ul>
+
+  <a name="DENON_AVRdefine"></a>
+  <b>Define</b>
+  <ul>
+    <code>define &lt;name&gt; DENON_AVR &lt;ip-address&gt;</code>
+    <br><br>
+
+    This module controls AV receiver from Denon via network connection. You are able
+    to power your AV reveiver on and off, query it's power state, select the volume
+    or mute/unmute the volume.<br><br>
+
+    Example:
+    <PRE>
+       define AV_Receiver DENON_AVR 192.168.0.10
+       
+    </PRE>
+  </ul>
+  
+  <a name="DENON_AVRset"></a>
+  <b>Set </b>
+  <ul>
+    <code>set &lt;name&gt; &lt;command&gt; [&lt;parameter&gt;]</code>
+    <br><br>
+    Currently, the following commands are defined: 
+
+<pre>on
+off
+volume 0..98
+mute on
+mute off
+rawCommand</pre>
+</ul>
+  <a name="DENON_AVRget"></a>
+  <b>Get</b>
+  <ul>
+    <code>get &lt;name&gt; &lt;what&gt;</code>
+    <br><br>
+    Currently, the following commands are defined and return the current state of the receiver.
+<pre>power
+mute 
+volume_level</pre>
+  </ul>
+  <a name="DENON_AVRattr"></a>
+  <b>Attributes</b>
+  <ul>
+  
+    <li><a href="#loglevel">loglevel</a></li>
+    <li><a href="#do_not_notify">do_not_notify</a></li>
+    <li><a href="#readingFnAttributes">readingFnAttributes</a></li><br>
+  </ul>
+<br>
+  <b>Implementator's note</b>
+  <ul>
+    The module is only usable if you activate "Network Standby" on your receiver.<br><br>
+    Technically there are many more commands and readings possible, but I think
+    these are the main usecases within FHEM.
+  </ul>
+  <br>
+</ul>
+
+
+=end html
+=begin html_DE
+
+<a name="DENON_AVR"></a>
+<h3>DENON_AVR</h3>
+<ul>
+
+  <a name="DENON_AVRdefine"></a>
+  <b>Definition</b>
+  <ul>
+    <code>define &lt;name&gt; DENON_AVR &lt;IP-Addresse&gt;</code>
+    <br><br>
+
+    Dieses Modul steuert AV-Receiver des Herstellers Denon &uuml;ber die Netzwerkschnittstelle.
+    Es bietet die M&ouml;glichkeit den Receiver an-/auszuschalten, die Lautst&auml;rke zu &auml;ndern, 
+	den Receiver "Stumm" zu schalten, sowie den aktuellen Status abzufragen.
+    <br><br>
+
+    Beispiel:
+    <PRE>
+       define AV_Receiver DENON_AVR 192.168.0.10
+    </PRE>
+  </ul>
+
+  <a name="DENON_AVRset"></a>
+  <b>Set-Kommandos </b>
+  <ul>
+    <code>set &lt;Name&gt; &lt;Kommando&gt; [&lt;Parameter&gt;]</code>
+    <br><br>
+    Aktuell werden folgende Kommandos unterst&uuml;tzt:
+
+<pre>on
+off
+volume 0..98
+mute on
+mute off
+rawCommand</pre>
+
+</ul>
+
+  <a name="DENON_AVRget"></a>
+  <b>Get-Kommandos</b>
+  <ul>
+    <code>get &lt;Name&gt; &lt;Parameter&gt;</code>
+    <br><br>
+    Aktuell stehen folgende Parameter zur Verf&uuml;gung welche den aktuellen Status des Receivers zur&uuml;ck geben.<br><br>
+     <ul>
+     <li><code>power</code> - Betriebszustand des Receiveres/Zone (on oder off)</li>
+     <li><code>mute</code> - Lautlos an oder aus (on oder off)</li>
+     <li><code>volume_level</code> - Lautst&auml;rkepegel in dB</li>
+     </ul>
+  </ul>
+  <br>
+  <a name="DENON_AVRattr"></a>
+  <b>Attribute</b>
+  <ul>
+  
+    <li><a href="#loglevel">loglevel</a></li>
+    <li><a href="#do_not_notify">do_not_notify</a></li>
+    <li><a href="#readingFnAttributes">readingFnAttributes</a></li><br>
+  </ul>
+<br>
+  <b>Hinweise des Autors</b>
+  <ul>
+    Dieses Modul ist nur nutzbar, wenn die Option "Network Standby" am Receiver aktiviert ist.<br><br>
+    Technisch gesehen sind viel mehr Kommandos und R&uuml;ckgabewerte m&ouml;glich, aber dies sind meiner
+    Meinung nach die wichtigsten innerhalb von FHEM.
+  </ul>
+  <br>
+</ul>
+=end html_DE
+
+=cut
