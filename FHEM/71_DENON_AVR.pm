@@ -29,7 +29,7 @@ package main;
 use strict;
 use warnings;
 
-use Time::HiRes qw(usleep);
+use Time::HiRes qw(usleep gettimeofday);
 
 ###################################
 my %commands = 
@@ -348,6 +348,7 @@ DENON_AVR_UpdateConfig($)
 		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
 	}
 	
+	RemoveInternalTimer($hash);
 	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
@@ -363,6 +364,7 @@ DENON_AVR_KeepAlive($)
 
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 
+	RemoveInternalTimer($hash);
 	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
