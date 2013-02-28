@@ -40,6 +40,12 @@ my %commands =
 	"mute:off" => "MUOFF"
 );
 
+my %powerStateTransition =
+(
+	"on"  => "off",
+	"off" => "on"
+);
+
 ###################################
 sub
 DENON_AVR_Initialize($)
@@ -61,7 +67,7 @@ DENON_AVR_Initialize($)
 	$hash->{SetFn}		= "DENON_AVR_Set";
 	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
 
-	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5  ".$readingFnAttributes;
+	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 ".$readingFnAttributes;
 }
 
 #####################################
@@ -71,12 +77,10 @@ DENON_AVR_DoInit($)
 	my ($hash) = @_;
 	my $name = $hash->{NAME};
   
-	Log 5, "DENON_AVR_DoInit: Called for $name";
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_DoInit: Called for $name";
 
-	DENON_AVR_SimpleWrite($hash, "PW?"); 
-	DENON_AVR_SimpleWrite($hash, "MU?");
-	DENON_AVR_SimpleWrite($hash, "MV?");
-	DENON_AVR_SimpleWrite($hash, "SI?");
+	DENON_AVR_Command_StatusRequest($hash);
 
 	$hash->{STATE} = "Initialized";
 	$hash->{helper}{INTERVAL} = 60 * 5;
@@ -91,17 +95,18 @@ DENON_AVR_Read($)
 	my ($hash) = @_;
 	my $name = $hash->{NAME};
 
-	Log 5, "DENON_AVR_Read: Called for $name";
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Read: Called for $name";
 
 	my $buf = DevIo_SimpleRead($hash);
 	return "" if (!defined($buf));
 
 	my $culdata = $hash->{PARTIAL};
-	Log 5, "DENON_AVR_Read: $culdata/$buf"; 
+	Log $ll5, "DENON_AVR_Read: $culdata/$buf"; 
 	$culdata .= $buf;
 
 	readingsBeginUpdate($hash);
-	while($culdata =~ m/\r/) 
+	while ($culdata =~ m/\r/) 
 	{
 		my $rmsg;
 		($rmsg, $culdata) = split("\r", $culdata, 2);
@@ -133,13 +138,17 @@ DENON_AVR_SimpleWrite(@)
 	my $ll5 = GetLogLevel($name, 5);
 	Log $ll5, "DENON_AVR_SimpleWrite: $msg";
 	
-	syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
+	my $doNotSendCommands = AttrVal($name, "do_not_send_commands", "0");
+	if ($doNotSendCommands ne "1")
+	{	
+		syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
 	
-	# Let's wait 100ms - not sure if still needed
-	usleep(100 * 1000);
+		# Let's wait 100ms - not sure if still needed
+		usleep(100 * 1000);
 	
-	# Some linux installations are broken with 0.001, T01 returns no answer
-	select(undef, undef, undef, 0.01);
+		# Some linux installations are broken with 0.001, T01 returns no answer
+		select(undef, undef, undef, 0.01);
+	}
 }
 
 ###################################
@@ -147,19 +156,21 @@ sub
 DENON_AVR_Parse(@)
 {
 	my ($hash, $msg) = @_;
+	my $name = $hash->{NAME};
 
-	Log 5, "DENON_AVR_Parse: Called";
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Parse: Parsing <$msg>";
 
 	if ($msg =~ /PW(.+)/)
 	{
-		my $power = $1;
-		if($power eq "STANDBY")
+		my $power = lc($1);
+		if ($power eq "standby")
 		{
 			$power = "Off";
 		}
 
-		readingsBulkUpdate($hash, "power", lc($power));
-		$hash->{STATE} = lc($power);
+		readingsBulkUpdate($hash, "power", $power);
+		$hash->{STATE} = $power;
 	}
 	elsif ($msg =~ /MU(.+)/)
 	{
@@ -167,7 +178,7 @@ DENON_AVR_Parse(@)
 	}
 	elsif ($msg =~ /MVMAX (.+)/)
 	{
-		Log 5, "DENON_AVR_Parse: Ignoring maximum volume of <$1>";	
+		Log $ll5, "DENON_AVR_Parse: Ignoring maximum volume of <$1>";	
 	}
 	elsif ($msg =~ /MV(.+)/)
 	{
@@ -186,7 +197,7 @@ DENON_AVR_Parse(@)
 	}
 	else 
 	{
-		Log 5, "DENON_AVR_Parse: Unknown message <$msg>";	
+		Log $ll5, "DENON_AVR_Parse: Unknown message <$msg>";	
 	}
 }
 
@@ -196,7 +207,7 @@ DENON_AVR_Define($$)
 {
 	my ($hash, $def) = @_;
 	
-	Log 5, "DENON_AVR_Define(".$def.") called.";
+	Log 5, "DENON_AVR_Define($def) called.";
 
 	my @a = split("[ \t][ \t]*", $def);
 	if (@a != 3)
@@ -272,61 +283,28 @@ DENON_AVR_Set($@)
 
 	if ($what =~ /^(on|off)$/)
 	{
-		my $command = $commands{"power:".$what};
-		DENON_AVR_SimpleWrite($hash, $command);
+		return DENON_AVR_Command_SetPower($hash, $what);
 	}
 	elsif ($what eq "toggle")
 	{
-		if ($hash->{STATE} eq "off")
-		{
-			my $command = $commands{"power:on"};
-			DENON_AVR_SimpleWrite($hash, $command);
-		}
-		else
-		{
-			my $command = $commands{"power:off"};
-			DENON_AVR_SimpleWrite($hash, $command);			
-		}
+		my $newPowerState = $powerStateTransition{$hash->{STATE}};
+		return $newPowerState if (!defined($newPowerState));		
+		
+		return DENON_AVR_Command_SetPower($hash, $newPowerState);
 	}
 	elsif ($what eq "mute")
 	{
 		my $mute = $a[2];
-		if (defined($mute))
-		{
-			$mute = lc($mute);
-			if ($hash->{STATE} eq "off")
-			{
-				return "mute can only used when device is powered on";
-			}
-			else
-			{
-				my $command = $commands{$what.":".$mute};
-				DENON_AVR_SimpleWrite($hash, $command);
-			}
-		}	
+		return $usage if (!defined($mute));
+		
+		return DENON_AVR_Command_SetMute($hash, $mute);
 	}
 	elsif ($what eq "volume")
 	{
 		my $volume = $a[2];
-		if (defined($volume))
-		{
-			$volume = $volume * 10;
-			if($hash->{STATE} eq "off")
-			{
-				return "volume can only used when device is powered on";
-			}
-			else
-			{
-				if ($volume % 10 == 0)
-				{
-					DENON_AVR_SimpleWrite($hash, "MV".($volume / 10));
-				}
-				else
-				{
-					DENON_AVR_SimpleWrite($hash, "MV".$volume);
-				}
-			}
-		}	
+		return $usage if (!defined($volume));
+		
+		return DENON_AVR_Command_SetVolume($hash, $volume);
 	}
 	elsif ($what eq "rawCommand")
 	{
@@ -335,8 +313,8 @@ DENON_AVR_Set($@)
 	}
 	elsif ($what eq "statusRequest")
 	{
-		# Status is always up to date
-		return undef;
+		# Force update of status
+		return DENON_AVR_Command_StatusRequest($hash);
 	}
 	else
 	{
@@ -378,10 +356,96 @@ sub
 DENON_AVR_KeepAlive($)
 {
 	my ($hash) = @_;
+	my $name = $hash->{NAME};
+
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_KeepAlive: Called for $name";
 
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 
 	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
+}
+
+#####################################
+sub
+DENON_AVR_Command_SetPower($$)
+{
+	my ($hash, $power) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetPower: Called for $name";
+
+	my $command = $commands{"power:".lc($power)};
+	DENON_AVR_SimpleWrite($hash, $command);
+	
+	return undef;
+}
+
+#####################################
+sub
+DENON_AVR_Command_SetMute($$)
+{
+	my ($hash, $mute) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetMute: Called for $name";
+	
+	return "mute can only used when device is powered on" if ($hash->{STATE} eq "off");
+
+	my $command = $commands{"mute:".lc($mute)};
+	DENON_AVR_SimpleWrite($hash, $command);
+	
+	return undef;
+}
+
+#####################################
+sub
+DENON_AVR_Command_SetVolume($$)
+{
+	my ($hash, $volume) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetVolume: Called for $name";
+	
+	$volume = $volume * 10;
+	if($hash->{STATE} eq "off")
+	{
+		return "volume can only used when device is powered on";
+	}
+	else
+	{
+		if ($volume % 10 == 0)
+		{
+			DENON_AVR_SimpleWrite($hash, "MV".($volume / 10));
+		}
+		else
+		{
+			DENON_AVR_SimpleWrite($hash, "MV".$volume);
+		}
+	}
+	
+	return undef;
+}
+
+#####################################
+sub
+DENON_AVR_Command_StatusRequest($)
+{
+	my ($hash) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_StatusRequest: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "PW?"); 
+	DENON_AVR_SimpleWrite($hash, "MU?");
+	DENON_AVR_SimpleWrite($hash, "MV?");
+	DENON_AVR_SimpleWrite($hash, "SI?");
+	
+	return undef;
 }
 
 1;
