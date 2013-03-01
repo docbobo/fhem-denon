@@ -65,9 +65,10 @@ DENON_AVR_Initialize($)
 	$hash->{UndefFn}	= "DENON_AVR_Undefine";
 	$hash->{GetFn}		= "DENON_AVR_Get";
 	$hash->{SetFn}		= "DENON_AVR_Set";
+	$hash->{AttrFn}     = "DENON_AVR_Attr";
 	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
 
-	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 ".$readingFnAttributes;
+	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive ".$readingFnAttributes;
 }
 
 #####################################
@@ -83,7 +84,6 @@ DENON_AVR_DoInit($)
 	DENON_AVR_Command_StatusRequest($hash);
 
 	$hash->{STATE} = "Initialized";
-	$hash->{helper}{INTERVAL} = 60 * 5;
 
 	return undef;
 }
@@ -322,6 +322,30 @@ DENON_AVR_Set($@)
 	}
 }
 
+###################################
+sub
+DENON_AVR_Attr($@)
+{
+	my @a = @_;
+	
+	my $what = $a[2];
+	if ($what eq "keepalive")
+	{
+		my $name = $a[1];
+	    my $hash = $defs{$name};
+		
+		my $keepalive = $a[3];
+	
+		my $ll5 = GetLogLevel($name, 5);
+		Log $ll5, "DENON_AVR_Attr: Changing keepalive to <$keepalive> seconds";
+	
+		RemoveInternalTimer($hash);
+		InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
+	}
+	
+	return undef;
+}
+
 #####################################
 sub
 DENON_AVR_Shutdown($)
@@ -348,8 +372,10 @@ DENON_AVR_UpdateConfig($)
 		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
 	}
 	
+	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
+	
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
@@ -364,8 +390,10 @@ DENON_AVR_KeepAlive($)
 
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 
+	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
+
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
