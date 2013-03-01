@@ -67,7 +67,7 @@ DENON_AVR_Initialize($)
 	$hash->{SetFn}		= "DENON_AVR_Set";
 	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
 
-	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 ".$readingFnAttributes;
+	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive".$readingFnAttributes;
 }
 
 #####################################
@@ -83,7 +83,6 @@ DENON_AVR_DoInit($)
 	DENON_AVR_Command_StatusRequest($hash);
 
 	$hash->{STATE} = "Initialized";
-	$hash->{helper}{INTERVAL} = 60 * 5;
 
 	return undef;
 }
@@ -348,8 +347,10 @@ DENON_AVR_UpdateConfig($)
 		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
 	}
 	
+	my $keepAlive = AttrVal($name, "keepAlive", 5 * 60);
+	
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
@@ -364,8 +365,10 @@ DENON_AVR_KeepAlive($)
 
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 
+	my $keepAlive = AttrVal($name, "keepAlive", 5 * 60);
+
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $hash->{helper}{INTERVAL}, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
