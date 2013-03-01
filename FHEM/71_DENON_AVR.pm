@@ -331,7 +331,9 @@ DENON_AVR_Attr($@)
 	my $what = $a[2];
 	if ($what eq "keepalive")
 	{
-		my $name = $a[1];		
+		my $name = $a[1];
+	    my $hash = $defs{$name};
+		
 		my $keepalive = $a[3];
 	
 		my $ll5 = GetLogLevel($name, 5);
