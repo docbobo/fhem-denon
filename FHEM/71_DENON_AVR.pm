@@ -65,9 +65,10 @@ DENON_AVR_Initialize($)
 	$hash->{UndefFn}	= "DENON_AVR_Undefine";
 	$hash->{GetFn}		= "DENON_AVR_Get";
 	$hash->{SetFn}		= "DENON_AVR_Set";
+	$hash->{AttrFn}     = "DENON_AVR_Attr";
 	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
 
-	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive".$readingFnAttributes;
+	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive ".$readingFnAttributes;
 }
 
 #####################################
@@ -319,6 +320,28 @@ DENON_AVR_Set($@)
 	{
 		return $usage;
 	}
+}
+
+###################################
+sub
+DENON_AVR_Attr($@)
+{
+	my ($hash, @a) = @_;
+	my $name = $hash->{NAME};
+	
+	my $what = $a[1];
+	if ($what eq "keepalive")
+	{
+		my $keepalive = $a[2];
+	
+		my $ll5 = GetLogLevel($name, 5);
+		Log $ll5, "DENON_AVR_Attr: Changing keepalive to <$keepalive> seconds";
+	
+		RemoveInternalTimer($hash);
+		InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
+	}
+	
+	return undef;
 }
 
 #####################################
