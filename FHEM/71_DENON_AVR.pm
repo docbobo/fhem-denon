@@ -326,13 +326,13 @@ DENON_AVR_Set($@)
 sub
 DENON_AVR_Attr($@)
 {
-	my ($hash, @a) = @_;
-	my $name = $hash->{NAME};
+	my @a = @_;
 	
-	my $what = $a[1];
+	my $what = $a[2];
 	if ($what eq "keepalive")
 	{
-		my $keepalive = $a[2];
+		my $name = $a[1];		
+		my $keepalive = $a[3];
 	
 		my $ll5 = GetLogLevel($name, 5);
 		Log $ll5, "DENON_AVR_Attr: Changing keepalive to <$keepalive> seconds";
