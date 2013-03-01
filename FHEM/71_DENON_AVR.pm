@@ -338,7 +338,7 @@ DENON_AVR_Attr($@)
 		Log $ll5, "DENON_AVR_Attr: Changing keepalive to <$keepalive> seconds";
 	
 		RemoveInternalTimer($hash);
-		InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
+		InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
 	}
 	
 	return undef;
@@ -370,10 +370,10 @@ DENON_AVR_UpdateConfig($)
 		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
 	}
 	
-	my $keepAlive = AttrVal($name, "keepAlive", 5 * 60);
+	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
 	
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
@@ -388,10 +388,10 @@ DENON_AVR_KeepAlive($)
 
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 
-	my $keepAlive = AttrVal($name, "keepAlive", 5 * 60);
+	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
 
 	RemoveInternalTimer($hash);
-	InternalTimer(gettimeofday() + $keepAlive, "DENON_AVR_KeepAlive", $hash, 0);
+	InternalTimer(gettimeofday() + $keepalive, "DENON_AVR_KeepAlive", $hash, 0);
 }
 
 #####################################
