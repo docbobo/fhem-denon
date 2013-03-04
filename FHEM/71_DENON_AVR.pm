@@ -5,6 +5,15 @@
 #	  An FHEM Perl module for controlling Denon AV-Receivers
 #	  via network connection. 
 #
+#     Currently supported are:  power (on|off)
+#                               volume (-80 ... 18)
+#                               volume_pct (0 ... 98)
+#                               mute (on|off)
+#
+#     In addition, you can send any documented command from the "DENON AVR
+#     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
+#     PWON" does the exact same thing as "power on"
+#
 #	  Copyright by Boris Pruessmann
 #	  e-mail: boris@pruessmann.org
 #
@@ -188,7 +197,8 @@ DENON_AVR_Parse(@)
 			$volume = $volume."0";
 		}
 
-		readingsBulkUpdate($hash, "volume_level", lc($volume / 10));
+		readingsBulkUpdate($hash, "volume_level", $volume / 10 - 80);
+		readingsBulkUpdate($hash, "volume_level_pct", $volume / 10);
 	}
 	elsif ($msg =~/SI(.+)/)
 	{
@@ -255,7 +265,7 @@ DENON_AVR_Get($@)
 	return "argument is missing" if (int(@a) != 2);
 	$what = $a[1];
 
-	if ($what =~ /^(power|volume_level|mute)$/)
+	if ($what =~ /^(power|volume_level|volume_level_pct|mute)$/)
 	{
 		if(defined($hash->{READINGS}{$what}))
 		{
@@ -268,7 +278,7 @@ DENON_AVR_Get($@)
 	}
 	else
 	{
-		return "Unknown argument $what, choose one of param power input volume_level mute get";
+		return "Unknown argument $what, choose one of param power input volume_level volume_level_pct mute get";
 	}
 }
 
@@ -279,7 +289,7 @@ DENON_AVR_Set($@)
 	my ($hash, @a) = @_;
 
 	my $what = $a[1];
-	my $usage = "Unknown argument $what, choose one of on off toggle volume:slider,0,1,98 mute:on,off rawCommand statusRequest";
+	my $usage = "Unknown argument $what, choose one of on off toggle volume:slider,-80,1,18 volume_pct:slider,-80,1,0 mute:on,off rawCommand statusRequest";
 
 	if ($what =~ /^(on|off)$/)
 	{
@@ -300,6 +310,13 @@ DENON_AVR_Set($@)
 		return DENON_AVR_Command_SetMute($hash, $mute);
 	}
 	elsif ($what eq "volume")
+	{
+		my $volume = $a[2];
+		return $usage if (!defined($volume));
+		
+		return DENON_AVR_Command_SetVolume($hash, $volume + 80);
+	}
+	elsif ($what eq "volume_pct")
 	{
 		my $volume = $a[2];
 		return $usage if (!defined($volume));

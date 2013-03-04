@@ -22,7 +22,8 @@ set ylabel "Volume %"
 set yrange [0:100]
 
 #FileLog 4:volume\_level:0:
+#FileLog 4:volume\_level\_pct:0:
 #FileLog 4:power:0:
 #FileLog 4:mute:0:
 
-plot "< awk '/volume_level:/ {print $1, $4}' <IN>" using 1:2 ls l0 axes x1y1 title 'Volume' with steps
+plot "< awk '/volume_level_pct:/ {print $1, $4}' <IN>" using 1:2 ls l0 axes x1y1 title 'Volume' with steps
