@@ -175,7 +175,7 @@ DENON_AVR_Parse(@)
 		my $power = lc($1);
 		if ($power eq "standby")
 		{
-			$power = "Off";
+			$power = "off";
 		}
 
 		readingsBulkUpdate($hash, "power", $power);
