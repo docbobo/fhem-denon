@@ -9,8 +9,8 @@
 #                               volumeStraight (-80 ... 18)
 #                               volume (0 ... 98)
 #                               mute (on|off)
-				input
-				soun
+				input (select input source)
+				sound (select sound mode)
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
