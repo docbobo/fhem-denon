@@ -1,4 +1,4 @@
-# $Id$
+# $Id$ 71_DENON_AVR.pm 2014-06-13 16:29:00 xusader $
 ##############################################################################
 #
 #	  71_DENON_AVR.pm
@@ -9,8 +9,8 @@
 #                               volumeStraight (-80 ... 18)
 #                               volume (0 ... 98)
 #                               mute (on|off)
-				input (select input source)
-				sound (select sound mode)
+#				input (select input source)
+#				sound (select sound mode)
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
@@ -19,8 +19,8 @@
 #	  Copyright by Boris Pruessmann
 #	  e-mail: boris@pruessmann.org
 #         
-          forked by xusader@t-online.de
-          
+#          forked by xusader@t-online.de
+#          
 #	  This file is part of fhem.
 #
 #	  Fhem is free software: you can redistribute it and/or modify
