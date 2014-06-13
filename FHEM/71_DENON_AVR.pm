@@ -6,9 +6,11 @@
 #	  via network connection. 
 #
 #     Currently supported are:  power (on|off)
-#                               volume (-80 ... 18)
-#                               volume_pct (0 ... 98)
+#                               volumeStraight (-80 ... 18)
+#                               volume (0 ... 98)
 #                               mute (on|off)
+				input
+				soun
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
