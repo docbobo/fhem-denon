@@ -17,9 +17,8 @@
 #     PWON" does the exact same thing as "power on"
 #
 #	  Copyright by Boris Pruessmann
-#	  e-mail: boris@pruessmann.org
-#         
-#          forked by xusader@t-online.de
+#	           
+#         forked by xusader/michaelmueller
 #          
 #	  This file is part of fhem.
 #
