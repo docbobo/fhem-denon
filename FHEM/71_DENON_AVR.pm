@@ -358,8 +358,6 @@ DENON_AVR_Set($@)
 	elsif ($what eq "mute")
 	{
 		my $mute = $a[2];
-		return $usage if (!defined($mute));
-		
 		return DENON_AVR_Command_SetMute($hash, $mute);
 	}
 	elsif ($what eq "input")
@@ -403,15 +401,11 @@ DENON_AVR_Set($@)
 	elsif ($what eq "volumeStraight")
 	{
 		my $volume = $a[2];
-		return $usage if (!defined($volume));
-		
 		return DENON_AVR_Command_SetVolume($hash, $volume + 80);
 	}
 	elsif ($what eq "volume")
 	{
 		my $volume = $a[2];
-		return $usage if (!defined($volume));
-		
 		return DENON_AVR_Command_SetVolume($hash, $volume);
 	}
 	elsif ($what eq "volumeDown")
