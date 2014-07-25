@@ -119,8 +119,8 @@ DENON_AVR_Initialize($)
 	$hash->{UndefFn}	= "DENON_AVR_Undefine";
 	$hash->{GetFn}		= "DENON_AVR_Get";
 	$hash->{SetFn}		= "DENON_AVR_Set";
-	$hash->{AttrFn}     = "DENON_AVR_Attr";
-	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
+	$hash->{AttrFn}     	= "DENON_AVR_Attr";
+	$hash->{ShutdownFn} 	= "DENON_AVR_Shutdown";
 
 	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive ".$readingFnAttributes;
 }
@@ -363,8 +363,6 @@ DENON_AVR_Set($@)
 	elsif ($what eq "input")
 	{
 		my $input = $a[2];
-		return $usage if (!defined($input));
-		
 		return DENON_AVR_Command_SetInput($hash, $input);
 	}
 	elsif ($what eq "sound")
@@ -393,8 +391,6 @@ DENON_AVR_Set($@)
 		    $sound = "VIDEO GAME";
 		}
 		
-		return $usage if (!defined($sound));
-
 		return DENON_AVR_Command_SetSound($hash, $sound);
 		
 	}
@@ -425,12 +421,12 @@ DENON_AVR_Set($@)
 	}
 	elsif ($what eq "statusRequest")
 	{
-		# Force update of status
-		return DENON_AVR_Command_StatusRequest($hash);
+	# Force update of status
+	return DENON_AVR_Command_StatusRequest($hash);
 	}
 	else
 	{
-		return $usage;
+	return $usage;
 	}
 }
 
@@ -444,7 +440,7 @@ DENON_AVR_Attr($@)
 	if ($what eq "keepalive")
 	{
 		my $name = $a[1];
-	    my $hash = $defs{$name};
+	    	my $hash = $defs{$name};
 		
 		my $keepalive = $a[3];
 	
