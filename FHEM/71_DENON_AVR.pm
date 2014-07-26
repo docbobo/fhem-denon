@@ -246,13 +246,11 @@ DENON_AVR_Parse(@)
 	}
 	elsif ($msg =~/SI(.+)/)
 	{
-		my $input = $1;
-		readingsBulkUpdate($hash, "input", $input);
+		readingsBulkUpdate($hash, "input", $1);
 	}
 	elsif ($msg =~/MS(.+)/)
 	{
-		my $sound = $1;
-		readingsBulkUpdate($hash, "sound", $sound);
+		readingsBulkUpdate($hash, "sound", $1);
 	}
 	else 
 	{
@@ -549,6 +547,9 @@ DENON_AVR_Command_SetInput($$)
 	Log $ll5, "DENON_AVR_Command_SetInput: Called for $name";
 
 	DENON_AVR_SimpleWrite($hash, "SI".$input);
+	readingsBeginUpdate($hash);	
+	readingsBulkUpdate($hash, "input", $input);
+	readingsEndUpdate($hash, 1);
 	
 	return undef;
 }
@@ -564,6 +565,9 @@ DENON_AVR_Command_SetSound($$)
 	Log $ll5, "DENON_AVR_Command_SetSound: Called for $name";
 
 	DENON_AVR_SimpleWrite($hash, "MS".$sound);
+	readingsBeginUpdate($hash);
+	readingsBulkUpdate($hash, "sound", $sound);	
+	readingsEndUpdate($hash, 1);
 	return undef;
 }
 
