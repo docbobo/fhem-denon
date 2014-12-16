@@ -390,7 +390,6 @@ DENON_AVR_Set($@)
 		}
 		
 		return DENON_AVR_Command_SetSound($hash, $sound);
-		
 	}
 	elsif ($what eq "volumeStraight")
 	{
@@ -426,6 +425,7 @@ DENON_AVR_Set($@)
 	{
 	return $usage;
 	}
+    return undef;
 }
 
 ###################################
@@ -625,4 +625,3 @@ DENON_AVR_Command_StatusRequest($)
 }
 
 1;
-
