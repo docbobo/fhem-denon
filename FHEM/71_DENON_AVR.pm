@@ -1,4 +1,4 @@
-# $Id$ 71_DENON_AVR.pm 2014-06-13 16:29:00 xusader $
+# $Id$ 71_DENON_AVR.pm 2015-01-07 08:14:00 xusader $
 ##############################################################################
 #
 #	  71_DENON_AVR.pm
@@ -267,6 +267,10 @@ DENON_AVR_Define($$)
 	Log 5, "DENON_AVR_Define($def) called.";
 
 	my @a = split("[ \t][ \t]*", $def);
+	
+	my ($name, $type) = @a;
+	$attr{$name}{"stateFormat"} = "power";
+	
 	if (@a != 3)
 	{
 		my $msg = "wrong syntax: define <name> DENON_AVR <ip-or-hostname>";
@@ -514,6 +518,10 @@ DENON_AVR_Command_SetPower($$)
 
 	my $command = $commands{"power:".lc($power)};
 	DENON_AVR_SimpleWrite($hash, $command);
+	
+	readingsBeginUpdate($hash);	
+	readingsBulkUpdate($hash, "power", $power);
+	readingsEndUpdate($hash, 1);
 	
 	return undef;
 }
