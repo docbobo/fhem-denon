@@ -262,13 +262,12 @@ DENON_AVR_Parse(@)
 sub
 DENON_AVR_Define($$)
 {
-	my ($hash, $def) = @_;
+	my ($hash, $name, $def) = @_;
 	
 	Log 5, "DENON_AVR_Define($def) called.";
 
 	my @a = split("[ \t][ \t]*", $def);
 	
-	my ($name, $type) = @a;
 	$attr{$name}{"stateFormat"} = "power";
 	
 	if (@a != 3)
