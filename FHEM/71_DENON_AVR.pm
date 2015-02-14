@@ -262,7 +262,7 @@ DENON_AVR_Parse(@)
 sub
 DENON_AVR_Define($$)
 {
-	my ($hash, $name, $def) = @_;
+	my ($hash, $def, $name) = @_;
 	
 	Log 5, "DENON_AVR_Define($def) called.";
 
