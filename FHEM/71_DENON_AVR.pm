@@ -478,7 +478,7 @@ DENON_AVR_UpdateConfig($)
 	my $webCmd	= AttrVal($name, "webCmd", "");
 	if (!$webCmd)
 	{
-		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
+		$attr{$name}{webCmd} = "volumeStraight:mute:input:sound";
 	}
 	
 	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
