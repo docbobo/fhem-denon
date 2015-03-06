@@ -19,6 +19,11 @@
 #	  Copyright by Boris Pruessmann
 #	           
 #         forked by xusader/michaelmueller
+#			forked by quigley
+#			now needs to specify telnetport 23 in define for TCP/IP:
+#			define myDenon DENON_AVR 192.168.0.12:23
+#			or define for serial port:
+#			define myDenon DENON_AVR /dev/ttyUSB0@9600
 #          
 #	  This file is part of fhem.
 #
@@ -29,7 +34,7 @@
 #
 #	  Fhem is distributed in the hope that it will be useful,
 #	  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#	  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+#	  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #	  GNU General Public License for more details.
 #
 #	  You should have received a copy of the GNU General Public License
@@ -195,8 +200,10 @@ DENON_AVR_SimpleWrite(@)
 	my $doNotSendCommands = AttrVal($name, "do_not_send_commands", "0");
 	if ($doNotSendCommands ne "1")
 	{	
-		syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
-	
+		#syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
+		#$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
+	   DevIo_SimpleWrite($msg.“\r“);
+
 		# Let's wait 100ms - not sure if still needed
 		usleep(100 * 1000);
 	
@@ -282,7 +289,8 @@ DENON_AVR_Define($$)
 
 	my $name = $a[0];
 	my $host = $a[2];
-	$hash->{DeviceName} = $host.":23";
+	#$hash->{DeviceName} = $host.":23";
+	$hash->{DeviceName} = $host;
 	my $ret = DevIo_OpenDev($hash, 0, "DENON_AVR_DoInit");
 	
 	InternalTimer(gettimeofday() + 5, "DENON_AVR_UpdateConfig", $hash, 0);
