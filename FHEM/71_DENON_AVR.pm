@@ -202,7 +202,7 @@ DENON_AVR_SimpleWrite(@)
 	{	
 		#syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
 		#$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
-	   DevIo_SimpleWrite($msg.“\r“);
+	   DevIo_SimpleWrite($msg."\r");
 
 		# Let's wait 100ms - not sure if still needed
 		usleep(100 * 1000);
