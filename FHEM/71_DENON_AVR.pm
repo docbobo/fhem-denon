@@ -200,9 +200,9 @@ DENON_AVR_SimpleWrite(@)
 	my $doNotSendCommands = AttrVal($name, "do_not_send_commands", "0");
 	if ($doNotSendCommands ne "1")
 	{	
-		#syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
-		#$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
-	   DevIo_SimpleWrite($msg."\r");
+		syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
+		$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
+	   	#DevIo_SimpleWrite($msg."\r");
 
 		# Let's wait 100ms - not sure if still needed
 		usleep(100 * 1000);
