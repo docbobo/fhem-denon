@@ -278,8 +278,6 @@ DENON_AVR_Define($$)
 
 	my @a = split("[ \t][ \t]*", $def);
 	
-	$attr{"stateFormat"} = "power";
-	
 	if (@a != 3)
 	{
 		my $msg = "wrong syntax: define <name> DENON_AVR <ip-or-hostname>";
@@ -297,6 +295,13 @@ DENON_AVR_Define($$)
 	my $ret = DevIo_OpenDev($hash, 0, "DENON_AVR_DoInit");
 	
 	InternalTimer(gettimeofday() + 5, "DENON_AVR_UpdateConfig", $hash, 0);
+	
+	unless (exists($attr{$name}{webCmd})){
+		$attr{$name}{webCmd} = 'volumeStraight:mute:input:sound:favorite';
+	}
+	unless (exists($attr{$name}{stateFormat})){
+		$attr{$name}{stateFormat} = 'power';
+	}
 	
 	return $ret;
 }
