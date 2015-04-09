@@ -11,6 +11,7 @@
 #                               mute (on|off)
 #				input (select input source)
 #				sound (select sound mode)
+#				favorite (1|2|3)
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
@@ -19,14 +20,16 @@
 #	  Copyright by Boris Pruessmann
 #	           
 #         forked by xusader/michaelmueller
-#			forked by quigley
-#			now needs to specify telnetport 23 in define for TCP/IP:
-#			define myDenon DENON_AVR 192.168.0.12:23
-#			or define for serial port:
-#			define myDenon DENON_AVR /dev/ttyUSB0@9600
-#          
+#		forked by quigley
+#		now needs to specify telnetport 23 in define for TCP/IP:
+#		define myDenon DENON_AVR 192.168.0.12:23
+#		or define for serial port:
+#		define myDenon DENON_AVR /dev/ttyUSB0@9600
+#         		forked by chrpme/MikeUnke
+#			favorites can be called now
+#		
 #	  This file is part of fhem.
-#
+#	
 #	  Fhem is free software: you can redistribute it and/or modify
 #	  it under the terms of the GNU General Public License as published by
 #	  the Free Software Foundation, either version 2 of the License, or
@@ -348,7 +351,7 @@ DENON_AVR_Set($@)
 
 	my $what = $a[1];
 	
-	my $usage = "Unknown argument $what, choose one of on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
+	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
 		    "input:" . join(",", sort keys %inputs) . " " .
 		    "sound:" . join(",", sort keys %sounds) . " " .
 		    "rawCommand statusRequest"; 	
@@ -356,6 +359,11 @@ DENON_AVR_Set($@)
 	if ($what =~ /^(on|off)$/)
 	{
 		return DENON_AVR_Command_SetPower($hash, $what);
+	}
+	elsif ($what eq "favorite")
+	{
+		my $favorite = $a[2];
+		return DENON_AVR_Command_SetFavorite($hash, $favorite);
 	}
 	elsif ($what eq "toggle")
 	{
@@ -586,6 +594,20 @@ DENON_AVR_Command_SetSound($$)
 	return undef;
 }
 
+#####################################
+sub
+DENON_AVR_Command_SetFavorite($$)
+{
+	my ($hash, $favorite) = @_;
+	my $name = $hash->{NAME};
+
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetFavorite: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "ZMFAVORITE".$favorite);
+
+	return undef;
+}
 #####################################
 sub
 DENON_AVR_Command_SetVolume($$)
