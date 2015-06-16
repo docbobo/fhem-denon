@@ -27,7 +27,9 @@
 #		or define for serial port:
 #		define myDenon DENON_AVR /dev/ttyUSB0@9600
 #         		forked by chrpme/MikeUnke
-#			favorites can be called now
+#			- Favorites can be called now
+#			- Fixed bug while setting volume to values less than 10
+#			- Code cleanup at SetVolume function
 #		
 #	  This file is part of fhem.
 #	
@@ -644,21 +646,21 @@ DENON_AVR_Command_SetVolume($$)
 	my $ll5 = GetLogLevel($name, 5);
 	Log $ll5, "DENON_AVR_Command_SetVolume: Called for $name";
 	
-	$volume = $volume * 10;
 	if($hash->{STATE} eq "off")
 	{
 		return "volume can only used when device is powered on";
 	}
 	else
 	{
-		if ($volume % 10 == 0)
+		if ($volume % 1 == 0)
 		{
-			DENON_AVR_SimpleWrite($hash, "MV".($volume / 10));
+			$volume = sprintf ('%02d', $volume); 
 		}
 		else
 		{
-			DENON_AVR_SimpleWrite($hash, "MV".$volume);
+			$volume = sprintf ('%03d', ($volume * 10));
 		}
+		DENON_AVR_SimpleWrite($hash, "MV".$volume);
 	}
 	
 	return undef;
