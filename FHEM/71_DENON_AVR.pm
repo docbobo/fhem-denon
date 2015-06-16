@@ -12,6 +12,7 @@
 #				input (select input source)
 #				sound (select sound mode)
 #				favorite (1|2|3)
+#				preset (P1|P2|P3)
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
@@ -297,7 +298,7 @@ DENON_AVR_Define($$)
 	InternalTimer(gettimeofday() + 5, "DENON_AVR_UpdateConfig", $hash, 0);
 	
 	unless (exists($attr{$name}{webCmd})){
-		$attr{$name}{webCmd} = 'volumeStraight:mute:input:sound:favorite';
+		$attr{$name}{webCmd} = 'volumeStraight:mute:input:sound:favorite:preset';
 	}
 	unless (exists($attr{$name}{stateFormat})){
 		$attr{$name}{stateFormat} = 'power';
@@ -356,7 +357,7 @@ DENON_AVR_Set($@)
 
 	my $what = $a[1];
 	
-	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
+	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 preset:P1,P2,P3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
 		    "input:" . join(",", sort keys %inputs) . " " .
 		    "sound:" . join(",", sort keys %sounds) . " " .
 		    "rawCommand statusRequest"; 	
@@ -369,6 +370,11 @@ DENON_AVR_Set($@)
 	{
 		my $favorite = $a[2];
 		return DENON_AVR_Command_SetFavorite($hash, $favorite);
+	}
+	elsif ($what eq "preset")
+	{
+		my $preset = $a[2];
+		return DENON_AVR_Command_SetPreset($hash, $preset);
 	}
 	elsif ($what eq "toggle")
 	{
@@ -615,6 +621,21 @@ DENON_AVR_Command_SetFavorite($$)
 }
 #####################################
 sub
+DENON_AVR_Command_SetPreset($$)
+{
+	my ($hash, $preset) = @_;
+	my $name = $hash->{NAME};
+
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetPreset: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "NS".$preset);
+
+	return undef;
+}
+
+#####################################
+sub
 DENON_AVR_Command_SetVolume($$)
 {
 	my ($hash, $volume) = @_;
@@ -658,6 +679,7 @@ DENON_AVR_Command_StatusRequest($)
 	DENON_AVR_SimpleWrite($hash, "MV?");
 	DENON_AVR_SimpleWrite($hash, "SI?");
 	DENON_AVR_SimpleWrite($hash, "MS?");
+	DENON_AVR_SimpleWrite($hash, "NSP");
 	DENON_AVR_SimpleWrite($hash, "ZM?");
 	DENON_AVR_SimpleWrite($hash, "Z2?");
 	DENON_AVR_SimpleWrite($hash, "Z3?");
