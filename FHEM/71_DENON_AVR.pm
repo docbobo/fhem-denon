@@ -1,4 +1,4 @@
-# $Id$
+# $Id$ 71_DENON_AVR.pm 2015-03-11 09:50:00 xusader $
 ##############################################################################
 #
 #	  71_DENON_AVR.pm
@@ -6,19 +6,32 @@
 #	  via network connection. 
 #
 #     Currently supported are:  power (on|off)
-#                               volume (-80 ... 18)
-#                               volume_pct (0 ... 98)
+#                               volumeStraight (-80 ... 18)
+#                               volume (0 ... 98)
 #                               mute (on|off)
+#				input (select input source)
+#				sound (select sound mode)
+#				favorite (1|2|3)
 #
 #     In addition, you can send any documented command from the "DENON AVR
 #     protocol documentation" via "rawCommand <command>"; e.g. "rawCommand
 #     PWON" does the exact same thing as "power on"
 #
 #	  Copyright by Boris Pruessmann
-#	  e-mail: boris@pruessmann.org
-#
+#	           
+#         forked by xusader/michaelmueller
+#		forked by quigley
+#		now needs to specify telnetport 23 in define for TCP/IP:
+#		define myDenon DENON_AVR 192.168.0.12:23
+#		or define for serial port:
+#		define myDenon DENON_AVR /dev/ttyUSB0@9600
+#         		forked by chrpme/MikeUnke
+#			- Favorites can be called now
+#			- Fixed bug while setting volume to values less than 10
+#			- Code cleanup at SetVolume function
+#		
 #	  This file is part of fhem.
-#
+#	
 #	  Fhem is free software: you can redistribute it and/or modify
 #	  it under the terms of the GNU General Public License as published by
 #	  the Free Software Foundation, either version 2 of the License, or
@@ -26,7 +39,7 @@
 #
 #	  Fhem is distributed in the hope that it will be useful,
 #	  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#	  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+#	  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #	  GNU General Public License for more details.
 #
 #	  You should have received a copy of the GNU General Public License
@@ -55,6 +68,48 @@ my %powerStateTransition =
 	"off" => "on"
 );
 
+my %inputs = 
+(
+	    "TUNER" => "",
+	    "DVD" => "",
+	    "BD" => "",
+	    "TV" => "",
+	    "SAT/CBL" => "",
+	    "MPLAY" => "",
+	    "GAME" => "",
+	    "AUX1" => "",
+	    "NET" => "",
+	    "SPOTIFY" => "",
+	    "FLICKR" => "",
+	    "FAVORITES" => "",
+	    "IRADIO" => "",
+	    "SERVER" => "",
+	    "USB/IPOD" => "",
+	    "USB" => "",
+	    "IPD" => "",
+	    "IRP" => "",
+	    "FVP" => ""
+);
+
+my %sounds = 
+(
+	    "MOVIE" => "",
+	    "MUSIC" => "",
+	    "GAME" => "",
+	    "DIRECT" => "",
+	    "STEREO" => "",
+	    "STANDARD" => "",
+	    "DOLBY_DIGITAL" => "",
+	    "DTS_SURROUND" => "",
+	    "MCH_STEREO" => "",
+	    "ROCK_ARENA" => "",
+	    "JAZZ_CLUB" => "",
+	    "MONO_MOVIE" => "",
+	    "MATRIX" => "",
+	    "VIDEO_GAME" => "",
+	    "VIRTUAL" => ""
+);
+
 ###################################
 sub
 DENON_AVR_Initialize($)
@@ -74,8 +129,8 @@ DENON_AVR_Initialize($)
 	$hash->{UndefFn}	= "DENON_AVR_Undefine";
 	$hash->{GetFn}		= "DENON_AVR_Get";
 	$hash->{SetFn}		= "DENON_AVR_Set";
-	$hash->{AttrFn}     = "DENON_AVR_Attr";
-	$hash->{ShutdownFn} = "DENON_AVR_Shutdown";
+	$hash->{AttrFn}     	= "DENON_AVR_Attr";
+	$hash->{ShutdownFn} 	= "DENON_AVR_Shutdown";
 
 	$hash->{AttrList}  = "do_not_notify:0,1 loglevel:0,1,2,3,4,5 do_not_send_commands:0,1 keepalive ".$readingFnAttributes;
 }
@@ -151,7 +206,9 @@ DENON_AVR_SimpleWrite(@)
 	if ($doNotSendCommands ne "1")
 	{	
 		syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
-	
+		$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
+	   	#DevIo_SimpleWrite($msg."\r");
+
 		# Let's wait 100ms - not sure if still needed
 		usleep(100 * 1000);
 	
@@ -196,14 +253,16 @@ DENON_AVR_Parse(@)
 		{
 			$volume = $volume."0";
 		}
-
-		readingsBulkUpdate($hash, "volume_level", $volume / 10 - 80);
-		readingsBulkUpdate($hash, "volume_level_pct", $volume / 10);
+		readingsBulkUpdate($hash, "volumeStraight", $volume / 10 - 80);
+		readingsBulkUpdate($hash, "volume", $volume / 10);
 	}
 	elsif ($msg =~/SI(.+)/)
 	{
-		my $input = $1;
-		readingsBulkUpdate($hash, "input", $input);
+		readingsBulkUpdate($hash, "input", $1);
+	}
+	elsif ($msg =~/MS(.+)/)
+	{
+		readingsBulkUpdate($hash, "sound", $1);
 	}
 	else 
 	{
@@ -220,6 +279,7 @@ DENON_AVR_Define($$)
 	Log 5, "DENON_AVR_Define($def) called.";
 
 	my @a = split("[ \t][ \t]*", $def);
+	
 	if (@a != 3)
 	{
 		my $msg = "wrong syntax: define <name> DENON_AVR <ip-or-hostname>";
@@ -232,11 +292,18 @@ DENON_AVR_Define($$)
 
 	my $name = $a[0];
 	my $host = $a[2];
-
-	$hash->{DeviceName} = $host.":23";
+	#$hash->{DeviceName} = $host.":23";
+	$hash->{DeviceName} = $host;
 	my $ret = DevIo_OpenDev($hash, 0, "DENON_AVR_DoInit");
 	
-	InternalTimer(gettimeofday() + 5,"DENON_AVR_UpdateConfig", $hash, 0);
+	InternalTimer(gettimeofday() + 5, "DENON_AVR_UpdateConfig", $hash, 0);
+	
+	unless (exists($attr{$name}{webCmd})){
+		$attr{$name}{webCmd} = 'volumeStraight:mute:input:sound:favorite';
+	}
+	unless (exists($attr{$name}{stateFormat})){
+		$attr{$name}{stateFormat} = 'power';
+	}
 	
 	return $ret;
 }
@@ -255,7 +322,7 @@ DENON_AVR_Undefine($$)
 	return undef;
 }
 
-#####################################
+#############################
 sub
 DENON_AVR_Get($@)
 {
@@ -265,10 +332,11 @@ DENON_AVR_Get($@)
 	return "argument is missing" if (int(@a) != 2);
 	$what = $a[1];
 
-	if ($what =~ /^(power|volume_level|volume_level_pct|mute)$/)
+	if ($what =~ /^(power|volumeStraight|volume|volumeDown|volumeUp|mute|input|sound)$/)
 	{
 		if(defined($hash->{READINGS}{$what}))
 		{
+			
 			return $hash->{READINGS}{$what}{VAL};
 		}
 		else
@@ -278,7 +346,7 @@ DENON_AVR_Get($@)
 	}
 	else
 	{
-		return "Unknown argument $what, choose one of param power input volume_level volume_level_pct mute get";
+		return "Unknown argument $what, choose one of power volumeStraight volume volumeDown volumeUp mute input sound";
 	}
 }
 
@@ -289,11 +357,20 @@ DENON_AVR_Set($@)
 	my ($hash, @a) = @_;
 
 	my $what = $a[1];
-	my $usage = "Unknown argument $what, choose one of on off toggle volume:slider,-80,1,18 volume_pct:slider,-80,1,0 mute:on,off rawCommand statusRequest";
+	
+	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
+		    "input:" . join(",", sort keys %inputs) . " " .
+		    "sound:" . join(",", sort keys %sounds) . " " .
+		    "rawCommand statusRequest"; 	
 
 	if ($what =~ /^(on|off)$/)
 	{
 		return DENON_AVR_Command_SetPower($hash, $what);
+	}
+	elsif ($what eq "favorite")
+	{
+		my $favorite = $a[2];
+		return DENON_AVR_Command_SetFavorite($hash, $favorite);
 	}
 	elsif ($what eq "toggle")
 	{
@@ -305,23 +382,60 @@ DENON_AVR_Set($@)
 	elsif ($what eq "mute")
 	{
 		my $mute = $a[2];
-		return $usage if (!defined($mute));
-		
 		return DENON_AVR_Command_SetMute($hash, $mute);
+	}
+	elsif ($what eq "input")
+	{
+		my $input = $a[2];
+		return DENON_AVR_Command_SetInput($hash, $input);
+	}
+	elsif ($what eq "sound")
+	{
+		my $sound = $a[2];
+		
+		if (	 $sound eq "DOLBY_DIGITAL") {
+		    $sound = "DOLBY DIGITAL";
+
+		} elsif ($sound eq "DTS_SURROUND") {		
+		    $sound = "DTS SURROUND";
+		}
+		elsif ($sound eq "MCH_STEREO") {		
+		    $sound = "MCH STEREO";
+		}
+		elsif ($sound eq "ROCK_ARENA") {		
+		    $sound = "ROCK ARENA";
+		}
+		elsif ($sound eq "JAZZ_CLUB") {		
+		    $sound = "JAZZ CLUB";
+		}
+		elsif ($sound eq "MONO_MOVIE") {		
+		    $sound = "MONO MOVIE";
+		}
+		elsif ($sound eq "VIDEO_GAME") {		
+		    $sound = "VIDEO GAME";
+		}
+		
+		return DENON_AVR_Command_SetSound($hash, $sound);
+	}
+	elsif ($what eq "volumeStraight")
+	{
+		my $volume = $a[2];
+		return DENON_AVR_Command_SetVolume($hash, $volume + 80);
 	}
 	elsif ($what eq "volume")
 	{
 		my $volume = $a[2];
-		return $usage if (!defined($volume));
-		
-		return DENON_AVR_Command_SetVolume($hash, $volume + 80);
-	}
-	elsif ($what eq "volume_pct")
-	{
-		my $volume = $a[2];
-		return $usage if (!defined($volume));
-		
 		return DENON_AVR_Command_SetVolume($hash, $volume);
+	}
+	elsif ($what eq "volumeDown")
+	{
+		my $cmd = "MVDOWN";
+		DENON_AVR_SimpleWrite($hash, $cmd);
+	}
+	elsif ($what eq "volumeUp")
+	{
+		my $cmd = "MVUP";
+		DENON_AVR_SimpleWrite($hash, $cmd);
 	}
 	elsif ($what eq "rawCommand")
 	{
@@ -330,13 +444,14 @@ DENON_AVR_Set($@)
 	}
 	elsif ($what eq "statusRequest")
 	{
-		# Force update of status
-		return DENON_AVR_Command_StatusRequest($hash);
+	# Force update of status
+	return DENON_AVR_Command_StatusRequest($hash);
 	}
 	else
 	{
-		return $usage;
+	return $usage;
 	}
+    return undef;
 }
 
 ###################################
@@ -349,7 +464,7 @@ DENON_AVR_Attr($@)
 	if ($what eq "keepalive")
 	{
 		my $name = $a[1];
-	    my $hash = $defs{$name};
+	    	my $hash = $defs{$name};
 		
 		my $keepalive = $a[3];
 	
@@ -386,7 +501,7 @@ DENON_AVR_UpdateConfig($)
 	my $webCmd	= AttrVal($name, "webCmd", "");
 	if (!$webCmd)
 	{
-		$attr{$name}{webCmd} = "toggle:on:off:statusRequest";
+		$attr{$name}{webCmd} = "volumeStraight:mute:input:sound";
 	}
 	
 	my $keepalive = AttrVal($name, "keepalive", 5 * 60);
@@ -426,6 +541,10 @@ DENON_AVR_Command_SetPower($$)
 	my $command = $commands{"power:".lc($power)};
 	DENON_AVR_SimpleWrite($hash, $command);
 	
+	readingsBeginUpdate($hash);	
+	readingsBulkUpdate($hash, "power", $power);
+	readingsEndUpdate($hash, 1);
+	
 	return undef;
 }
 
@@ -449,6 +568,55 @@ DENON_AVR_Command_SetMute($$)
 
 #####################################
 sub
+DENON_AVR_Command_SetInput($$)
+{
+	my ($hash, $input) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetInput: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "SI".$input);
+	readingsBeginUpdate($hash);	
+	readingsBulkUpdate($hash, "input", $input);
+	readingsEndUpdate($hash, 1);
+	
+	return undef;
+}
+
+#####################################
+sub
+DENON_AVR_Command_SetSound($$)
+{
+	my ($hash, $sound) = @_;
+	my $name = $hash->{NAME};
+	
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetSound: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "MS".$sound);
+	readingsBeginUpdate($hash);
+	readingsBulkUpdate($hash, "sound", $sound);	
+	readingsEndUpdate($hash, 1);
+	return undef;
+}
+
+#####################################
+sub
+DENON_AVR_Command_SetFavorite($$)
+{
+	my ($hash, $favorite) = @_;
+	my $name = $hash->{NAME};
+
+	my $ll5 = GetLogLevel($name, 5);
+	Log $ll5, "DENON_AVR_Command_SetFavorite: Called for $name";
+
+	DENON_AVR_SimpleWrite($hash, "ZMFAVORITE".$favorite);
+
+	return undef;
+}
+#####################################
+sub
 DENON_AVR_Command_SetVolume($$)
 {
 	my ($hash, $volume) = @_;
@@ -457,21 +625,21 @@ DENON_AVR_Command_SetVolume($$)
 	my $ll5 = GetLogLevel($name, 5);
 	Log $ll5, "DENON_AVR_Command_SetVolume: Called for $name";
 	
-	$volume = $volume * 10;
 	if($hash->{STATE} eq "off")
 	{
 		return "volume can only used when device is powered on";
 	}
 	else
 	{
-		if ($volume % 10 == 0)
+		if ($volume % 0.5 == 0)
 		{
-			DENON_AVR_SimpleWrite($hash, "MV".($volume / 10));
+			$volume = sprintf ('%02d', $volume); 
 		}
 		else
 		{
-			DENON_AVR_SimpleWrite($hash, "MV".$volume);
+			$volume = sprintf ('%03d', ($volume * 10));
 		}
+		DENON_AVR_SimpleWrite($hash, "MV".$volume);
 	}
 	
 	return undef;
@@ -491,6 +659,11 @@ DENON_AVR_Command_StatusRequest($)
 	DENON_AVR_SimpleWrite($hash, "MU?");
 	DENON_AVR_SimpleWrite($hash, "MV?");
 	DENON_AVR_SimpleWrite($hash, "SI?");
+	DENON_AVR_SimpleWrite($hash, "MS?");
+	DENON_AVR_SimpleWrite($hash, "ZM?");
+	DENON_AVR_SimpleWrite($hash, "Z2?");
+	DENON_AVR_SimpleWrite($hash, "Z3?");
+	DENON_AVR_SimpleWrite($hash, "SLP?");
 	
 	return undef;
 }
