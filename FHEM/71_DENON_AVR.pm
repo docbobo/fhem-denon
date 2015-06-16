@@ -631,7 +631,7 @@ DENON_AVR_Command_SetVolume($$)
 	}
 	else
 	{
-		if ($volume % 1 == 0)
+		if ($volume % 0.5 == 0)
 		{
 			$volume = sprintf ('%02d', $volume); 
 		}
