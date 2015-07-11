@@ -3,7 +3,7 @@ fhem-denon
 
 FHEM module for controlling Denon AV Receivers. Can be installed via
 
-update all https://github.com/xusader/fhem-denon/controls_denon.txt
+update force https://github.com/xusader/fhem-denon/controls_denon.txt
  
 or:
 
