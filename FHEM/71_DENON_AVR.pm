@@ -446,6 +446,7 @@ DENON_AVR_Set($@)
 	elsif ($what eq "rawCommand")
 	{
 		my $cmd = $a[2];
+		$cmd = $a[2]." ".$a[3] if defined $a[3];
 		DENON_AVR_SimpleWrite($hash, $cmd); 
 	}
 	elsif ($what eq "statusRequest")
