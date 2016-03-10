@@ -1,4 +1,4 @@
-# $Id$ 71_DENON_AVR.pm 2016-03-03 14:25:00 xusader $
+# $Id$ 71_DENON_AVR.pm 2015-03-11 09:50:00 xusader $
 ##############################################################################
 #
 #	  71_DENON_AVR.pm
@@ -30,6 +30,10 @@
 #			- Favorites can be called now
 #			- Fixed bug while setting volume to values less than 10
 #			- Code cleanup at SetVolume function
+#				forked by Amenophis86
+#			- rawCommand mit Leerzeichen
+#			- reconnect / disconnect
+#			- SimpleWrite update
 #		
 #	  This file is part of fhem.
 #	
@@ -194,6 +198,7 @@ DENON_AVR_Write($$$)
 }
 
 ###################################
+###################################
 sub
 DENON_AVR_SimpleWrite(@)
 {
@@ -206,9 +211,9 @@ DENON_AVR_SimpleWrite(@)
 	my $doNotSendCommands = AttrVal($name, "do_not_send_commands", "0");
 	if ($doNotSendCommands ne "1")
 	{	
-		syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
-		$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
-	   	#DevIo_SimpleWrite($msg."\r");
+		#syswrite($hash->{TCPDev}, $msg."\r") if ($hash->{TCPDev});
+		#$hash->{USBDev}->write($msg."\r")    if($hash->{USBDev});
+	   DevIo_SimpleWrite($hash, $msg."\r", 0);
 
 		# Let's wait 100ms - not sure if still needed
 		usleep(100 * 1000);
@@ -359,7 +364,7 @@ DENON_AVR_Set($@)
 
 	my $what = $a[1];
 	
-	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 preset:P1,P2,P3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off " . 
+	my $usage = "Unknown argument $what, choose one of favorite:1,2,3 preset:P1,P2,P3 on off toggle volumeDown volumeUp volumeStraight:slider,-80,1,18 volume:slider,0,1,98 mute:on,off reconnect disconnect " . 
 		    "input:" . join(",", sort keys %inputs) . " " .
 		    "sound:" . join(",", sort keys %sounds) . " " .
 		    "rawCommand statusRequest"; 	
@@ -453,6 +458,26 @@ DENON_AVR_Set($@)
 	{
 	# Force update of status
 	return DENON_AVR_Command_StatusRequest($hash);
+	}
+	elsif ($what eq "reconnect")
+	{
+		my $status = $hash->{READINGS}{"state"}{VAL};
+		if($status ne "opened")
+		{
+			DevIo_OpenDev($hash, 0, "DENON_AVR_DoInit");	
+		}
+		else 
+		{
+			return "Device must be connected to disconnect!";
+		}
+	}
+	elsif ($what eq "disconnect")
+	{
+			my $name = $hash->{NAME};
+			DevIo_CloseDev($hash);
+			$hash->{STATE} = "disconnected";
+			setReadingsVal($hash, "state", "disconnected", TimeNow());
+			Log 1, "$name: closed!";
 	}
 	else
 	{
@@ -671,12 +696,13 @@ DENON_AVR_Command_SetVolume($$)
 sub
 DENON_AVR_Command_StatusRequest($)
 {
-	my ($hash) = @_;
+ 	my ($hash) = @_;
+	
 	my $name = $hash->{NAME};
 	
 	my $ll5 = GetLogLevel($name, 5);
 	Log $ll5, "DENON_AVR_Command_StatusRequest: Called for $name";
-
+	
 	DENON_AVR_SimpleWrite($hash, "PW?"); 
 	DENON_AVR_SimpleWrite($hash, "MU?");
 	DENON_AVR_SimpleWrite($hash, "MV?");
