@@ -1,3 +1,7 @@
+This module is obsolete!
+
+Take this one: https://forum.fhem.de/index.php/topic,58452.0.html 
+
 fhem-denon
 ==========
 
